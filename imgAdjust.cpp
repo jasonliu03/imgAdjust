@@ -21,15 +21,15 @@ using namespace cv;
  * 
  * @return 0 if success, else return error code 
  */  
-int adjustBrightnessContrast(InputArray src, OutputArray dst, int brightness, int contrast)  
+int adjustBrightnessContrast(Mat& src, Mat& dst, int brightness, int contrast)  
 {  
-    Mat input = src.getMat();  
-    if( input.empty() ) {  
-        return -1;  
-    }  
+    //Mat input = src.getMat();  
+    //if( input.empty() ) {  
+    //    return -1;  
+    //}  
   
     dst.create(src.size(), src.type());  
-    Mat output = dst.getMat();  
+    //Mat output = dst.getMat();  
   
     brightness = CLIP_RANGE(brightness, -255, 255);  
     contrast = CLIP_RANGE(contrast, -255, 255);  
@@ -56,7 +56,7 @@ int adjustBrightnessContrast(InputArray src, OutputArray dst, int brightness, in
     for (int i = 0; i < 256; i++)  
         p[i] = COLOR_RANGE( (i - 127.5 * (1 - B)) * k + 127.5 * (1 + B) );  
   
-    LUT(input, lookupTable, output);  
+    LUT(src, lookupTable, dst);  
   
     return 0;  
 }  
@@ -131,12 +131,65 @@ void AdjustHSI(Mat& img, Mat& aImg, int  hue, int saturation, int ilumination)
       
 }  
 
+void ColorBalance(Mat& img, Mat& cbImg, int cR, int cG, int cB)  
+{  
+    if ( cbImg.empty())   
+        cbImg.create(img.rows, img.cols, img.type());    
+  
+    //cbImg = cv::Scalar::all(0);  
+  
+    int i, j;  
+    Size size = img.size();  
+    int chns = img.channels();  
+  
+    if (img.isContinuous() && cbImg.isContinuous())  
+    {   
+        size.width *= size.height;   
+        size.height = 1;  
+    }   
+    
+    // 验证参数范围  
+    if ( cR<-255 )   
+        cR = -255;  
+  
+    if ( cG<-255 )   
+        cG = -255;  
+  
+    if ( cB<-255 )   
+        cB = -255;  
+  
+    if ( cR>255)  
+        cR = 255;  
+  
+    if ( cG>255)  
+        cG = 255;  
+  
+    if ( cB>255)  
+        cB = 255;  
+  
+  
+    for (  i= 0; i<size.height; ++i)  
+    {   
+        const unsigned char* src = (const unsigned char*)(img.data+ img.step*i);  
+        unsigned char* dst = (unsigned char*)cbImg.data+cbImg.step*i;  
+        for (  j=0; j<size.width; ++j)  
+        {
+            dst[j*chns] = saturate_cast<uchar>(src[j*chns] +cR);  
+            dst[j*chns+1] = saturate_cast<uchar>(src[j*chns+1] +cG);  
+            dst[j*chns+2] = saturate_cast<uchar>(src[j*chns+2] +cB);    
+        }
+    }    
+}  
+
+
   
   
 //=====主程序开始====  
   
 static string window_name = "photo";  
+static string window_img = "image";  
 static Mat src;  
+static Mat dst;  
 static int brightness = 255;  
 static int contrast = 255;  
   
@@ -144,18 +197,35 @@ static int hue = 180;
 static int saturation = 255;  
 static int ilumination = 255;  
 
+static int cR = 255;
+static int cG = 255;
+static int cB = 255;
+
+
 static void callbackAdjust_bright(int , void *)  
 {  
-    Mat dst;  
     adjustBrightnessContrast(src, dst, brightness - 255, contrast - 255);  
-    imshow(window_name, dst);  
+    imshow(window_img, dst);  
 }  
   
 static void callbackAdjust_HSI(int , void *)  
 {  
-    Mat dst;  
     AdjustHSI(src, dst, hue-180, saturation-255, ilumination-255);
-    imshow(window_name, dst);  
+    imshow(window_img, dst);  
+}  
+  
+static void callbackAdjust_ColorBalance(int , void *)  
+{  
+    ColorBalance(src, dst, cB - 255, cG - 255, cR - 255);
+    imshow(window_img, dst);  
+}  
+  
+static void callbackAdjust(int , void *)  
+{  
+    adjustBrightnessContrast(src, dst, brightness - 255, contrast - 255);  
+    AdjustHSI(dst, dst, hue-180, saturation-255, ilumination-255);
+    ColorBalance(dst, dst, cB - 255, cG - 255, cR - 255);
+    imshow(window_img, dst);  
 }  
   
   
@@ -173,14 +243,22 @@ int main(int argc, char** argv)
         cout << "error read image" << endl;  
         return -1;  
     }  
+    dst.create(src.size(), src.type());  
   
     namedWindow(window_name, CV_WINDOW_NORMAL| CV_WINDOW_KEEPRATIO| CV_GUI_EXPANDED);  
-    createTrackbar("brightness", window_name, &brightness, 2*brightness, callbackAdjust_bright);  
-    createTrackbar("contrast", window_name, &contrast, 2*contrast, callbackAdjust_bright);  
+    namedWindow(window_img, CV_WINDOW_NORMAL| CV_WINDOW_KEEPRATIO| CV_GUI_EXPANDED);  
+    resizeWindow(window_img, 1024, 1080);
+    createTrackbar("brightness", window_name, &brightness, 2*brightness, callbackAdjust);  
+    createTrackbar("contrast", window_name, &contrast, 2*contrast, callbackAdjust);  
 
-    createTrackbar("hue", window_name, &hue, 2*hue, callbackAdjust_HSI);  
-    createTrackbar("saturation", window_name, &saturation, 2*saturation, callbackAdjust_HSI);  
-    createTrackbar("ilumination", window_name, &ilumination, 2*ilumination, callbackAdjust_HSI);  
+    createTrackbar("hue", window_name, &hue, 2*hue, callbackAdjust);  
+    createTrackbar("saturation", window_name, &saturation, 2*saturation, callbackAdjust);  
+    createTrackbar("ilumination", window_name, &ilumination, 2*ilumination, callbackAdjust);  
+
+    createTrackbar("cR", window_name, &cR, 2*cR, callbackAdjust);
+    createTrackbar("cG", window_name, &cG, 2*cG, callbackAdjust);
+    createTrackbar("cB", window_name, &cB, 2*cB, callbackAdjust);
+
     callbackAdjust_bright(0, 0);  
     callbackAdjust_HSI(0, 0);  
   
