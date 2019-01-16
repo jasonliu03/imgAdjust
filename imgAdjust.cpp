@@ -181,12 +181,55 @@ void ColorBalance(Mat& img, Mat& cbImg, int cR, int cG, int cB)
     }    
 }  
 
+// Gamma 矫正量[0.1, 5.0]  
+void GammaCorrect(Mat& img, Mat& cImg, float ga)  
+{  
+    if ( cImg.empty())    
+        cImg.create(img.rows, img.cols, img.type());          
+  
+    //cImg = cv::Scalar::all(0);  
+  
+    int i, j;  
+    Size size = img.size();  
+    int chns = img.channels();  
+  
+    if (img.isContinuous() && cImg.isContinuous())  
+    {  
+        size.width *= size.height;   
+        size.height = 1;  
+    }  
+  
+    // 验证参数范围  
+    ga = ga / 10.0;
+    if ( ga<0.1) ga = -0.1;  
+    if ( ga> 5.0) ga = 5.0;      
+  
+    // 加速，建立查找表  
+    unsigned char lut[256];    
+    for(  i = 0; i < 256; i++ )    
+    {    
+        lut[i] = saturate_cast<uchar>(cv::pow((float)(i/255.0), ga) * 255.0f);    
+    }   
+  
+    for (  i= 0; i<size.height; ++i)  
+    {  
+        const unsigned char* src = (const unsigned char*)(img.data+ img.step*i);  
+        unsigned char* dst = (unsigned char*)cImg.data+cImg.step*i;  
+        for (  j=0; j<size.width; ++j)  
+        {                     
+            dst[j*chns] = lut[src[j*chns]];  
+            dst[j*chns+1] = lut[src[j*chns+1]];  
+            dst[j*chns+2] = lut[src[j*chns+2]];       
+        }  
+    }     
+} 
+
 
   
   
 //=====主程序开始====  
   
-static string window_name = "photo";  
+static string window_name = "control";  
 static string window_img = "image";  
 static Mat src;  
 static Mat dst;  
@@ -200,6 +243,8 @@ static int ilumination = 255;
 static int cR = 255;
 static int cG = 255;
 static int cB = 255;
+
+static int ga= 10;
 
 
 static void callbackAdjust_bright(int , void *)  
@@ -225,6 +270,7 @@ static void callbackAdjust(int , void *)
     adjustBrightnessContrast(src, dst, brightness - 255, contrast - 255);  
     AdjustHSI(dst, dst, hue-180, saturation-255, ilumination-255);
     ColorBalance(dst, dst, cB - 255, cG - 255, cR - 255);
+    GammaCorrect(dst, dst, ga);
     imshow(window_img, dst);  
 }  
   
@@ -259,8 +305,9 @@ int main(int argc, char** argv)
     createTrackbar("cG", window_name, &cG, 2*cG, callbackAdjust);
     createTrackbar("cB", window_name, &cB, 2*cB, callbackAdjust);
 
-    callbackAdjust_bright(0, 0);  
-    callbackAdjust_HSI(0, 0);  
+    createTrackbar("gamma", window_name, &ga, 50, callbackAdjust);
+
+    callbackAdjust(0, 0);  
   
     waitKey();  
 
