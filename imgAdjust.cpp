@@ -1,4 +1,5 @@
 #include <iostream>  
+#include <string>  
 #include "opencv2/core.hpp"  
 #include "opencv2/imgproc.hpp"  
 #include "opencv2/highgui.hpp"  
@@ -226,13 +227,14 @@ void GammaCorrect(Mat& img, Mat& cImg, float ga)
 
 
   
-  
+
 //=====主程序开始====  
   
 static string window_name = "control";  
 static string window_img = "image";  
 static Mat src;  
 static Mat dst;  
+static Mat mask;  
 static int brightness = 255;  
 static int contrast = 255;  
   
@@ -264,6 +266,125 @@ static void callbackAdjust_ColorBalance(int , void *)
     ColorBalance(src, dst, cB - 255, cG - 255, cR - 255);
     imshow(window_img, dst);  
 }  
+
+
+int getMask(Mat& img, Mat& mask)
+{
+    Size size = img.size();  
+    int chns = img.channels();  
+
+    for (int i= 0; i<size.height; ++i)  
+    {   
+        const unsigned char* src = (const unsigned char*)(img.data+ img.step*i);  
+        unsigned char* dst = (unsigned char*)mask.data+mask.step*i;  
+        for (int j=0; j<size.width; ++j)  
+        {
+            if (saturate_cast<uchar>(src[j*chns])<200 || saturate_cast<uchar>(src[j*chns+1])<200 || saturate_cast<uchar>(src[j*chns+2])<200)
+            {
+                dst[j*chns] = 255;  
+                dst[j*chns+1] = 255;  
+                dst[j*chns+2] = 255;       
+            }
+        }
+    }    
+
+    return 0;
+}
+
+
+int* getRGB(Mat& img)
+{
+    int *rgb = new int[3];
+    for (int i=0; i<3; i++)
+    {
+        rgb[i] = 0;
+    }
+
+    Size size = img.size();  
+    int chns = img.channels();  
+
+    mask.create(img.size(), img.type());  
+    getMask(src, mask);
+    Mat grayMask = Mat::zeros(img.size(), CV_8UC1);
+    cvtColor(mask, grayMask, CV_BGR2GRAY);      
+
+    CvScalar cs;  
+    cs = mean(img, grayMask);  
+
+    rgb[0] = cs.val[2];
+    rgb[1] = cs.val[1];
+    rgb[2] = cs.val[0];
+
+    return rgb;
+}
+  
+int* getLAB(Mat& img)
+{
+    int *lab = new int[3];
+    for (int i=0; i<3; i++)
+    {
+        lab[i] = 0;
+    }
+
+    Mat temp;  
+    temp.create(img.rows, img.cols, img.type());      
+    cvtColor(img, temp, CV_BGR2Lab);      
+
+    Size size = img.size();  
+    int chns = img.channels();  
+
+    mask = Mat::zeros(img.size(), img.type());
+    getMask(src, mask);
+    Mat grayMask = Mat::zeros(img.size(), CV_8UC1);
+    cvtColor(mask, grayMask, CV_BGR2GRAY);      
+    //imwrite("grayMask.jpg", grayMask);
+
+    CvScalar cs;  
+    cs = mean(temp, grayMask);  
+
+    lab[0] = cs.val[0];
+    lab[1] = cs.val[1];
+    lab[2] = cs.val[2];
+
+    if ( temp.empty())  
+        temp.release();  
+      
+    return lab;
+}
+  
+int* getHSV(Mat& img)
+{
+    int *hsv = new int[3];
+    for (int i=0; i<3; i++)
+    {
+        hsv[i] = 0;
+    }
+
+    Mat temp;  
+    temp.create(img.rows, img.cols, img.type());      
+    cvtColor(img, temp, CV_BGR2HSV);      
+
+    Size size = img.size();  
+    int chns = img.channels();  
+
+    mask = Mat::zeros(img.size(), img.type());
+    getMask(src, mask);
+    Mat grayMask = Mat::zeros(img.size(), CV_8UC1);
+    cvtColor(mask, grayMask, CV_BGR2GRAY);      
+    //imwrite("grayMask.jpg", grayMask);
+
+    CvScalar cs;  
+    cs = mean(temp, grayMask);  
+
+    hsv[0] = cs.val[0];
+    hsv[1] = cs.val[1];
+    hsv[2] = cs.val[2];
+
+    if ( temp.empty())  
+        temp.release();  
+      
+    return hsv;
+}
   
 static void callbackAdjust(int , void *)  
 {  
@@ -271,6 +392,40 @@ static void callbackAdjust(int , void *)
     AdjustHSI(dst, dst, hue-180, saturation-255, ilumination-255);
     ColorBalance(dst, dst, cB - 255, cG - 255, cR - 255);
     GammaCorrect(dst, dst, ga);
+    
+    int *rgb = NULL;
+    rgb = getRGB(dst);
+    Point ptRGB(5,dst.size().height/10);
+    stringstream ss;
+    ss << "RGB:" << rgb[0] << "," << rgb[1] << "," << rgb[2];
+    string strRGB = ss.str();
+    putText(dst,strRGB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
+    cout << strRGB << endl;
+    delete rgb;
+    rgb = NULL;
+
+    int *lab = NULL;
+    lab = getLAB(dst);
+    Point ptLAB(5,dst.size().height*3/10);
+    stringstream ssLAB;
+    ssLAB << "LAB:" << lab[0] << "," << lab[1] << "," << lab[2];
+    string strLAB = ssLAB.str();
+    //putText(dst,strLAB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
+    cout << strLAB << endl;
+    delete lab;
+    lab = NULL;
+
+    int *hsv = NULL;
+    hsv = getHSV(dst);
+    Point ptHSV(5,dst.size().height*6/10);
+    stringstream ssHSV;
+    ssHSV << "HSV:" << hsv[0] << "," << hsv[1] << "," << hsv[2];
+    string strHSV = ssHSV.str();
+    //putText(dst,strHSV,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
+    cout << strHSV << endl << endl;
+    delete hsv;
+    hsv = NULL;
+
     imshow(window_img, dst);  
 }  
   
