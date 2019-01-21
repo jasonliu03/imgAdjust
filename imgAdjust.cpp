@@ -62,6 +62,74 @@ int adjustBrightnessContrast(Mat& src, Mat& dst, int brightness, int contrast)
     return 0;  
 }  
 
+// L:0~255, A:0~255, B:0~255  
+void AdjustLAB(Mat& img, Mat& aImg, int  l, int a, int b)  
+{  
+    if ( aImg.empty())    
+        aImg.create(img.rows, img.cols, img.type());      
+  
+    Mat temp;  
+    temp.create(img.rows, img.cols, img.type());      
+  
+    cvtColor(img, temp, CV_BGR2Lab);      
+  
+    int i, j;  
+    Size size = img.size();  
+    int chns = img.channels();  
+  
+    if (temp.isContinuous())  
+    {  
+        size.width *= size.height;   
+        size.height = 1;  
+    }  
+  
+    // 验证参数范围  
+    if ( l<-255 )  
+        l = -255;  
+  
+    if ( a<-255)  
+        a = -255;  
+  
+    if ( b<-255 )  
+        b = -255;  
+  
+    if ( l>255)  
+        l = 255;  
+  
+    if ( a>255)  
+        a = 255;  
+  
+    if ( b>255)  
+        b = 255;  
+  
+  
+    for (  i= 0; i<size.height; ++i)  
+    {         
+        unsigned char* src = (unsigned char*)temp.data+temp.step*i;  
+        for (  j=0; j<size.width; ++j)  
+        {  
+            float val = src[j*chns]+l;  
+            if ( val < 0) val = 0.0;  
+            if ( val > 255 ) val = 255;  
+            src[j*chns] = val;  
+  
+            val = src[j*chns+1]+a;  
+            if ( val < 0) val = 0;  
+            if ( val > 255 ) val = 255;  
+            src[j*chns+1] = val;  
+              
+            val = src[j*chns+2]+b;  
+            if ( val < 0) val = 0;  
+            if ( val > 255 ) val = 255;  
+            src[j*chns+2] = val;                          
+        }  
+    }     
+  
+    cvtColor(temp, aImg, CV_Lab2BGR);  
+    if ( temp.empty())  
+        temp.release();  
+      
+}  
 
 // H:0~180, S:0~255, V:0~255  
 void AdjustHSI(Mat& img, Mat& aImg, int  hue, int saturation, int ilumination)  
@@ -72,7 +140,7 @@ void AdjustHSI(Mat& img, Mat& aImg, int  hue, int saturation, int ilumination)
     Mat temp;  
     temp.create(img.rows, img.cols, img.type());      
   
-    cvtColor(img, temp, CV_RGB2HSV);      
+    cvtColor(img, temp, CV_BGR2HSV);      
   
     int i, j;  
     Size size = img.size();  
@@ -126,7 +194,7 @@ void AdjustHSI(Mat& img, Mat& aImg, int  hue, int saturation, int ilumination)
         }  
     }     
   
-    cvtColor(temp, aImg, CV_HSV2RGB);  
+    cvtColor(temp, aImg, CV_HSV2BGR);  
     if ( temp.empty())  
         temp.release();  
       
@@ -241,6 +309,10 @@ static int contrast = 255;
 static int hue = 180;  
 static int saturation = 255;  
 static int ilumination = 255;  
+
+static int l = 255;  
+static int a = 255;  
+static int b = 255;  
 
 static int cR = 255;
 static int cG = 255;
@@ -389,6 +461,7 @@ int* getHSV(Mat& img)
 static void callbackAdjust(int , void *)  
 {  
     adjustBrightnessContrast(src, dst, brightness - 255, contrast - 255);  
+    AdjustLAB(dst, dst, l-255, a-255, b-255);
     AdjustHSI(dst, dst, hue-180, saturation-255, ilumination-255);
     ColorBalance(dst, dst, cB - 255, cG - 255, cR - 255);
     GammaCorrect(dst, dst, ga);
@@ -451,6 +524,10 @@ int main(int argc, char** argv)
     resizeWindow(window_img, 1024, 1080);
     createTrackbar("brightness", window_name, &brightness, 2*brightness, callbackAdjust);  
     createTrackbar("contrast", window_name, &contrast, 2*contrast, callbackAdjust);  
+
+    createTrackbar("l", window_name, &l, 2*l, callbackAdjust);  
+    createTrackbar("a", window_name, &a, 2*a, callbackAdjust);  
+    createTrackbar("b", window_name, &b, 2*b, callbackAdjust);  
 
     createTrackbar("hue", window_name, &hue, 2*hue, callbackAdjust);  
     createTrackbar("saturation", window_name, &saturation, 2*saturation, callbackAdjust);  
