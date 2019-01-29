@@ -299,6 +299,7 @@ void GammaCorrect(Mat& img, Mat& cImg, float ga)
 //=====主程序开始====  
   
 static string window_name = "control";  
+static string window_src = "src";  
 static string window_img = "image";  
 static Mat src;  
 static Mat dst;  
@@ -520,6 +521,7 @@ int main(int argc, char** argv)
     dst.create(src.size(), src.type());  
   
     namedWindow(window_name, CV_WINDOW_NORMAL| CV_WINDOW_KEEPRATIO| CV_GUI_EXPANDED);  
+    namedWindow(window_src, CV_WINDOW_NORMAL| CV_WINDOW_KEEPRATIO| CV_GUI_EXPANDED);  
     namedWindow(window_img, CV_WINDOW_NORMAL| CV_WINDOW_KEEPRATIO| CV_GUI_EXPANDED);  
     resizeWindow(window_img, 1024, 1080);
     createTrackbar("brightness", window_name, &brightness, 2*brightness, callbackAdjust);  
@@ -529,17 +531,18 @@ int main(int argc, char** argv)
     createTrackbar("a", window_name, &a, 2*a, callbackAdjust);  
     createTrackbar("b", window_name, &b, 2*b, callbackAdjust);  
 
-    createTrackbar("hue", window_name, &hue, 2*hue, callbackAdjust);  
-    createTrackbar("saturation", window_name, &saturation, 2*saturation, callbackAdjust);  
-    createTrackbar("ilumination", window_name, &ilumination, 2*ilumination, callbackAdjust);  
+    createTrackbar("h", window_name, &hue, 2*hue, callbackAdjust);  
+    createTrackbar("s", window_name, &saturation, 2*saturation, callbackAdjust);  
+    createTrackbar("i", window_name, &ilumination, 2*ilumination, callbackAdjust);  
 
     createTrackbar("cR", window_name, &cR, 2*cR, callbackAdjust);
     createTrackbar("cG", window_name, &cG, 2*cG, callbackAdjust);
     createTrackbar("cB", window_name, &cB, 2*cB, callbackAdjust);
 
-    createTrackbar("gamma", window_name, &ga, 50, callbackAdjust);
+    createTrackbar("ga", window_name, &ga, 50, callbackAdjust);
 
     callbackAdjust(0, 0);  
+    imshow(window_src, src);
   
     waitKey();  
 
