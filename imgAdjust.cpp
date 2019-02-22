@@ -346,13 +346,18 @@ int getMask(Mat& img, Mat& mask)
     Size size = img.size();  
     int chns = img.channels();  
 
+    Mat temp;  
+    temp.create(img.rows, img.cols, img.type());      
+    cvtColor(img, temp, CV_BGR2HSV);      
+
     for (int i= 0; i<size.height; ++i)  
     {   
         const unsigned char* src = (const unsigned char*)(img.data+ img.step*i);  
+        const unsigned char* hsv = (const unsigned char*)(temp.data+ temp.step*i);  
         unsigned char* dst = (unsigned char*)mask.data+mask.step*i;  
         for (int j=0; j<size.width; ++j)  
         {
-            if (saturate_cast<uchar>(src[j*chns])<200 || saturate_cast<uchar>(src[j*chns+1])<200 || saturate_cast<uchar>(src[j*chns+2])<200)
+            if ((saturate_cast<uchar>(src[j*chns])<200 || saturate_cast<uchar>(src[j*chns+1])<200 || saturate_cast<uchar>(src[j*chns+2])<200) && (saturate_cast<uchar>(hsv[j*chns])<30 || 180 - saturate_cast<uchar>(hsv[j*chns])<20))
             {
                 dst[j*chns] = 255;  
                 dst[j*chns+1] = 255;  
@@ -475,8 +480,6 @@ static void callbackAdjust(int , void *)
     string strRGB = ss.str();
     putText(dst,strRGB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
     cout << strRGB << endl;
-    delete rgb;
-    rgb = NULL;
 
     int *lab = NULL;
     lab = getLAB(dst);
@@ -486,8 +489,6 @@ static void callbackAdjust(int , void *)
     string strLAB = ssLAB.str();
     //putText(dst,strLAB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
     cout << strLAB << endl;
-    delete lab;
-    lab = NULL;
 
     int *hsv = NULL;
     hsv = getHSV(dst);
@@ -496,7 +497,17 @@ static void callbackAdjust(int , void *)
     ssHSV << "HSV:" << hsv[0] << "," << hsv[1] << "," << hsv[2];
     string strHSV = ssHSV.str();
     //putText(dst,strHSV,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
-    cout << strHSV << endl << endl;
+    cout << strHSV << endl;
+
+    stringstream ssRst;
+    ssRst << "rst:" << rgb[0] << "," << rgb[1] << "," << rgb[2] << "," << lab[0] << "," << lab[1] << "," << lab[2] << "," << hsv[0] << "," << hsv[1] << "," << hsv[2];
+    string strRst = ssRst.str();
+    cout << strRst << endl << endl;
+
+    delete rgb;
+    rgb = NULL;
+    delete lab;
+    lab = NULL;
     delete hsv;
     hsv = NULL;
 
