@@ -370,9 +370,9 @@ int getMask(Mat& img, Mat& mask)
 }
 
 
-int* getRGB(Mat& img)
+float* getRGB(Mat& img)
 {
-    int *rgb = new int[3];
+    float *rgb = new float[3];
     for (int i=0; i<3; i++)
     {
         rgb[i] = 0;
@@ -396,9 +396,9 @@ int* getRGB(Mat& img)
     return rgb;
 }
   
-int* getLAB(Mat& img)
+float* getLAB(Mat& img)
 {
-    int *lab = new int[3];
+    float *lab = new float[3];
     for (int i=0; i<3; i++)
     {
         lab[i] = 0;
@@ -430,9 +430,9 @@ int* getLAB(Mat& img)
     return lab;
 }
   
-int* getHSV(Mat& img)
+float* getHSV(Mat& img)
 {
-    int *hsv = new int[3];
+    float *hsv = new float[3];
     for (int i=0; i<3; i++)
     {
         hsv[i] = 0;
@@ -472,7 +472,7 @@ static void callbackAdjust(int , void *)
     ColorBalance(dst, dst, cB - 255, cG - 255, cR - 255);
     GammaCorrect(dst, dst, ga);
     
-    int *rgb = NULL;
+    float *rgb = NULL;
     rgb = getRGB(dst);
     Point ptRGB(5,dst.size().height/10);
     stringstream ss;
@@ -481,7 +481,7 @@ static void callbackAdjust(int , void *)
     putText(dst,strRGB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
     cout << strRGB << endl;
 
-    int *lab = NULL;
+    float *lab = NULL;
     lab = getLAB(dst);
     Point ptLAB(5,dst.size().height*3/10);
     stringstream ssLAB;
@@ -490,7 +490,7 @@ static void callbackAdjust(int , void *)
     //putText(dst,strLAB,ptRGB,CV_FONT_HERSHEY_COMPLEX,1,Scalar(0,0,255),1,1);
     cout << strLAB << endl;
 
-    int *hsv = NULL;
+    float *hsv = NULL;
     hsv = getHSV(dst);
     Point ptHSV(5,dst.size().height*6/10);
     stringstream ssHSV;
